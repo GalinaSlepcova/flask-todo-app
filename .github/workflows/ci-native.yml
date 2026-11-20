@@ -1,4 +1,3 @@
-
 name: Flask CI Pipeline
 
 on:
@@ -27,18 +26,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set Python path
+        run: echo "PYTHONPATH=$PWD/application:$PWD" >> $GITHUB_ENV
+
       - name: Initialize SQLite database
         run: |
-          python -c "from app import app, db; app.app_context().push(); db.create_all()"
+          python -c "from manage import app, db; app.app_context().push(); db.create_all()"
 
       - name: Smoke test Flask server
         run: |
-          python app.py &
+          python manage.py runserver &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
 
           for i in {1..15}; do
-            if curl -fsS http://127.0.0.1:5000/; then
+            if curl -fsS http://127.0.0.1:7345/; then
               echo "Flask server is working!"
               exit 0
             fi
