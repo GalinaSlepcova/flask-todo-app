@@ -10,7 +10,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -19,23 +19,20 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set Python path
-        run: echo "PYTHONPATH=$PWD/application:$PWD" >> $GITHUB_ENV
-
       - name: Initialize SQLite database
         run: |
-          python -c "from manage import app, db; app.app_context().push(); db.create_all()"
+          python -c "from manage import app, db; from application.models import Todo; app.app_context().push(); db.create_all()"
 
       - name: Smoke test Flask server
         run: |
-          python manage.py runserver &
+          python manage.py &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
 

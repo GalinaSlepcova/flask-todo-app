@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+
 import flask
 from flask import request, redirect, flash, render_template, url_for
 from application.extensions import db
@@ -14,17 +15,18 @@ todo_bp = flask.Blueprint(
 
 @todo_bp.route('/', methods=['GET', 'POST'])
 def index():
-    todo = Todo.query.order_by('-id')
-    _form = request.form
+    todo = Todo.query.order_by(Todo.id.desc()).all()
 
     if request.method == 'POST':
-        title = _form["title"]
+        title = request.form["title"]
         td = Todo(title=title)
+
         try:
             td.store_to_db()
             flash("add task successfully!")
             return redirect(url_for('todo.index'))
         except Exception as e:
+            db.session.rollback()
             print(e)
             flash("fail to add task!")
 
@@ -34,8 +36,10 @@ def index():
 @todo_bp.route('/<int:todo_id>/del')
 def del_todo(todo_id):
     todo = Todo.query.filter_by(id=todo_id).first()
+
     if todo:
         todo.delete_todo()
+
     flash("delete task successfully")
     return redirect(url_for('todo.index'))
 
@@ -45,9 +49,7 @@ def edit(todo_id):
     todo = Todo.query.filter_by(id=todo_id).first()
 
     if request.method == 'POST':
-        Todo.query.filter_by(
-            id=todo_id
-        ).update({
+        Todo.query.filter_by(id=todo_id).update({
             Todo.title: request.form['title']
         })
         db.session.commit()
@@ -60,6 +62,7 @@ def edit(todo_id):
 @todo_bp.route('/<int:todo_id>/done')
 def done(todo_id):
     todo = Todo.query.filter_by(id=todo_id).first()
+
     if todo:
         Todo.query.filter_by(id=todo_id).update({Todo.status: True})
         db.session.commit()
@@ -71,14 +74,15 @@ def done(todo_id):
 @todo_bp.route('/<int:todo_id>/redo')
 def redo(todo_id):
     todo = Todo.query.filter_by(id=todo_id).first()
+
     if todo:
         Todo.query.filter_by(id=todo_id).update({Todo.status: False})
-        flash("redo successfully!")
         db.session.commit()
+        flash("redo successfully!")
 
     return redirect(url_for('todo.index'))
 
 
 @todo_bp.errorhandler(404)
-def page_not_found():
+def page_not_found(error):
     return render_template('404.html'), 404
